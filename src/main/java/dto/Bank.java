@@ -13,11 +13,22 @@ public class Bank {
     int id;
     String name;
     String owner;
+    String sourceUrl;
 
-    public Bank(String name, String owner){
+    public Bank(String name, String owner, String sourceUrl){
         this.name = name;
         this.owner = owner;
+        this.sourceUrl = sourceUrl;
     }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
+    }
+    
     
     public Bank(int id, String name, String owner) {
         this.id = id;

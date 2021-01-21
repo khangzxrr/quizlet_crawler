@@ -10,7 +10,6 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import vongockhang.swt_crawling.Main;
 import util.WebDriverUtil;
 
 /**
@@ -32,11 +31,11 @@ public class LoginService {
 
     private boolean openLoginModal(int retriedTime) throws InterruptedException {
         try {
-            if (retriedTime == 10) {
+            if (retriedTime == 20) {
                 return false;
             }
 
-            By loginButtonSelector = By.cssSelector(".SiteHeader-signIn > button");
+            By loginButtonSelector = By.cssSelector(".SiteNavLoginSection > button");
             //first button is login button
             By loginModalSelector = By.cssSelector(".LoginPromptModal-form");
 
