@@ -13,11 +13,17 @@ import java.io.IOException;
 import java.nio.file.FileSystemException;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import webdriver.action.LoginService;
 import org.openqa.selenium.PageLoadStrategy;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 import util.DatabaseUtil;
 import webdriver.action.CrawlingService;
 import webdriver.action.SubjectPagingService;
@@ -26,20 +32,22 @@ import webdriver.action.SubjectPagingService;
  *
  * @author skyho
  */
-public class Crawler {
+@Command(name = "Crawler", version = {"1.0"}, mixinStandardHelpOptions = true)
+public class Crawler implements Runnable{
+    @Parameters(paramLabel = "<subject>", defaultValue = "PRN292", description = "subject code which need to craw")
+    public String SUBJECT = "PRN292"; //this is what thay Hoang need
 
-    public static String SUBJECT = "PRN292"; //this is what thay Hoang need
+    @Option(names = {"-user", "--username"}, description = "quizlet Username")
+    public String username = "khangzxrr";
+    @Option(names= {"-pass", "--password"}, description = "quizlet Password")
+    public String password = "123123aaa";
 
-    public static String username = "khangzxrr";
-    public static String password = "123123aaa";
+    @Option(names= {"--page"}, description = { "how many page should we get"}) 
+    public int MAX_PAGE = 1; //how many page should we craw... 1 is alots!
 
-    public static int MAX_PAGE = 2; //how many page should we craw... 1 is alots!
-
-    public static void main(String[] args) throws InterruptedException {
-        System.out.println(args.length);
-        
-        
-        WebDriver driver = null;
+    @Override
+    public void run() {
+       WebDriver driver = null;
         
         try {
             DatabaseUtil.backupOldDatabaseAndCreateNewOne(); //backup and restore blank database
@@ -94,27 +102,25 @@ public class Crawler {
                 subjectPagingService.nextPage();
             }
             
-            
-
-            /*
-            try (PrintWriter out = new PrintWriter("output.html")) {
-                out.print(HTMLUtil.generateHTMLPage(domContentSources));
-            } catch (FileNotFoundException ex) {
-                Logger.getLogger(Crawler.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            */
-
         }catch(FileSystemException e){
             System.err.println("Please close any CMD, sqlite tool that access to original or current sql file!");
         }catch (IOException ex) {
             System.err.println("Error at backup, restore sql file...");
-            ex.printStackTrace();
+            Logger.getLogger(Crawler.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Crawler.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             if (driver != null){
                 driver.quit();    
             }
             
-        }
-
+        }  
     }
+    
+    public static void main(String[] args){
+        int exitCode = new CommandLine(new Crawler()).execute(args);
+        System.exit(exitCode);
+    }
+
+    
 }
