@@ -18,9 +18,15 @@ import util.HTMLUtil;
  *
  * @author skyho
  */
-public class SourceExporter {
+public class SourceExporter implements Runnable {
+    String exportName;
+    public SourceExporter(String exportName) {
+        this.exportName = exportName;
+    }
 
-    public static void main(String[] args) {
+    
+    @Override
+    public void run() {
         try {
             QuestionBankManager manager = new QuestionBankManager();
 
@@ -31,16 +37,16 @@ public class SourceExporter {
             List<Bank> banks = manager.getBanks();
             for (Bank bank : banks) {
                 List<Key> keys = manager.getKeysOfBank(bank.getId());
-                renderedSource.add(HTMLUtil.getHTMLSource(bank, keys));    
+                renderedSource.add(HTMLUtil.getHTMLSource(bank, keys));
             }
-            PrintWriter outputHTML = new PrintWriter("output/output.html");
+            PrintWriter outputHTML = new PrintWriter("output/" + exportName + ".html");
             outputHTML.print(HTMLUtil.generateHTMLPage(renderedSource, banks));
             outputHTML.close();
-            
+
             System.out.println("Generated " + banks.size() + " sources");
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
+
 }

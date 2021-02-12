@@ -45,8 +45,17 @@ public class Crawler implements Runnable{
     @Option(names= {"--page"}, description = { "how many page should we get"}) 
     public int MAX_PAGE = 1; //how many page should we craw... 1 is alots!
 
+    @Option(names= {"--export", "-e"}, description = { "Export to static HTML page"})
+    public String exportName = "";
+    
     @Override
     public void run() {
+        if (!exportName.isEmpty()){
+            SourceExporter exporter = new SourceExporter(exportName);
+            exporter.run();
+            return;
+        }
+        
        WebDriver driver = null;
         
         try {
