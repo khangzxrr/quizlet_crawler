@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package vongockhang.swt_crawling;
+package vongockhang.crawler;
 
 import dao.QuestionBankManager;
 import dto.Bank;

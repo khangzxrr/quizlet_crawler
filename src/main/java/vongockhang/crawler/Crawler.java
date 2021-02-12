@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package vongockhang.swt_crawling;
+package vongockhang.crawler;
 
 import dao.QuestionBankManager;
 import dto.Bank;
@@ -36,7 +36,9 @@ public class Crawler {
     public static int MAX_PAGE = 2; //how many page should we craw... 1 is alots!
 
     public static void main(String[] args) throws InterruptedException {
-
+        System.out.println(args.length);
+        
+        
         WebDriver driver = null;
         
         try {
