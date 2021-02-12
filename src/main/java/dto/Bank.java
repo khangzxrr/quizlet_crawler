@@ -30,10 +30,11 @@ public class Bank {
     }
     
     
-    public Bank(int id, String name, String owner) {
+    public Bank(int id, String name, String owner, String url) {
         this.id = id;
         this.name = name;
         this.owner = owner;
+        this.sourceUrl = url;
     }
 
     

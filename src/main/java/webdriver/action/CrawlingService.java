@@ -7,13 +7,16 @@ package webdriver.action;
 
 import dto.Bank;
 import dto.Key;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
 import java.util.ArrayList;
 import java.util.List;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import util.ConstantUtil;
 import util.WebDriverUtil;
 
 /**
@@ -28,7 +31,10 @@ public class CrawlingService {
         this.driver = driver;
     }
 
-    public Bank getCurrentBank() {
+    public Bank getCurrentBank(int tried) throws InterruptedException {
+        if (tried == 10) {
+            return null;
+        }
         try {
 
             By titleDivSelector = By.cssSelector(".SetPage-titleWrapper");
@@ -45,86 +51,115 @@ public class CrawlingService {
 
             return bank;
         } catch (Exception e) {
-            e.printStackTrace();
+            Thread.sleep(1000);
+            return getCurrentBank(++tried);
+        }
+    }
+
+    private boolean closePopupModal() {
+        try {
+            WebElement popupModalCloseButton = driver.findElement(By.cssSelector("div.UIModal-closeButtonWrapper > div > button"));
+            if (popupModalCloseButton != null) {
+                popupModalCloseButton.click();
+            }
+
+            return true;
+        } catch (Exception e) {
         }
 
-        return null;
+        return false;
     }
-    
-    
 
-    public List<Key> crawlingKeys() {
+    private boolean getIntoExportPopup(int retried) {
+        if (retried == 5) {
+            return false;
+        }
+
+        try {
+            JavascriptExecutor jsExecutor = WebDriverUtil.getJSExecutor(driver);
+            jsExecutor.executeScript("var buttons = document.querySelectorAll('.SetPage-options button'); "
+                    + "buttons[buttons.length - 1].dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));");
+            //using javascript to trigger mouse hover event!
+
+            Thread.sleep(250);
+            
+            jsExecutor.executeScript("document.querySelector('.UIIcon--export').parentNode.parentNode.parentNode.click()");
+
+            return true;
+            //click on export button
+        } catch (Exception e) {
+            System.out.println("Retry getting into popup");
+            return getIntoExportPopup(++retried);
+        }
+
+
+    }
+
+    public List<Key> crawlingKeys(int triedTime) {
         List<Key> keys = new ArrayList<>();
+
+        if (triedTime == 3) {
+            return keys; //skip this shit
+        }
 
         try {
             //quizlet is tricky, so do us. simulating scrolling to force quizlet show all DOM
             JavascriptExecutor jsExecutor = WebDriverUtil.getJSExecutor(driver); //javascript boi!
 
             long currentHeight = 0;
-            for(;;){
-                try{
-                    WebElement navigateElement = driver.findElement(By.cssSelector(".SlidingCarousel-counter"));
+            for (;;) {
+                try {
+                    currentHeight += 400;
+                    jsExecutor.executeScript(String.format("window.scrollTo(0,%d);", currentHeight)); //scroll using javascript
+
+                    closePopupModal(); //must close the popup modal, if not DOM will not load the more options button
+
+                    //tricky hack to allow popup in browser view
+                    driver.findElement(By.cssSelector(".SetPage-options button"));
+                    currentHeight += 400;
+                    jsExecutor.executeScript(String.format("window.scrollTo(0,%d);", currentHeight)); //scroll using javascript
+                    //===============
+                    
                     break;
-                }catch(NoSuchElementException e){
-                    if (e.getMessage().contains("SlidingCarousel-counter")){
-                        System.out.println("still not reach end of page.. keep scrolling");
+
+                } catch (Exception e) {
+                    if (currentHeight > 1000){
+                        currentHeight = 0;    
                     }
                 }
-                currentHeight += 1500;
-                jsExecutor.executeScript(String.format("window.scrollTo(0,%d);", currentHeight)); //scroll using javascript
-                Thread.sleep(100);
+
             }
 
-            By leftSideSelector = By.cssSelector(".SetPageTerm-side.SetPageTerm-smallSide"); //left box selector
-            By rightSideSelector = By.cssSelector(".SetPageTerm-side.SetPageTerm-largeSide"); //right box selector
+            if (!getIntoExportPopup(0)) { //only crawling if only popup is poped, otherwise retried
+                driver.navigate().refresh();
+                return crawlingKeys(++triedTime);
+            }else{
+                WebElement betweenRowsInput = driver.findElement(By.cssSelector("#SetPageExportModal-CustomRowDelim-input"));
+                betweenRowsInput.clear();
+                betweenRowsInput.sendKeys("\\nLINE_BREAK\\n");
 
-            //get 10 (you define this number) first text|text to determine which is question and which is answer
-            List<WebElement> leftDivsElements = driver.findElements(leftSideSelector); //left div element
-            List<WebElement> rightDivsElements = driver.findElements(rightSideSelector); //right div element
+                WebElement boxDeviderInput = driver.findElement(By.cssSelector("#SetPageExportModal-CustomWordDelim-input"));
+                boxDeviderInput.clear();
+                boxDeviderInput.sendKeys("SPLIT_BOX");
 
-            List<String> leftDivsText = new ArrayList<>(); //list contain left div innerText
-            List<String> rightDivsText = new ArrayList<>();  //list contain right div innerText
-            
-            
-            leftDivsElements.stream().forEach((leftDiv) -> { 
-                leftDivsText.add(leftDiv.getAttribute("innerHTML").replaceAll("<br><br>", "<br>")); //get innerHTML to keep <br> 
-            });
+                WebElement copyTextClipboardButton = driver.findElement(By.cssSelector(".SetPageExportModal-copy button"));
+                copyTextClipboardButton.click();
+                Thread.sleep(500);
+                copyTextClipboardButton.click(); //make sure it actually copy!
 
-            rightDivsElements.stream().forEach((rightDiv) -> {
-                rightDivsText.add(rightDiv.getAttribute("innerHTML").replaceAll("<br><br>", "<br>")); 
-            });
+                String rawBoxesStr = (String) Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+                String[] boxesStr = rawBoxesStr.split(ConstantUtil.LINE_BREAK);
 
-            int leftIsAnswerConfident = 0;
-            System.out.println("comparing leftbox..rightbox....");
-            for (int i = 0; i < 10; i++) {
-                if (leftDivsText.get(i).length() < leftDivsText.get(i).length()) { //if left text is shorter than right text
-                    //assume it is answer => confident += 1
-                    leftIsAnswerConfident++;
+                for (int i = 0; i < boxesStr.length; i++) { //left or right divs are equal element count
+                    Key key = new Key(boxesStr[i]);
+                    keys.add(key);
                 }
             }
-
-            //prediction use only 10 elements, it will be much faster than you compare every single time 
-            //============================================================
-            System.out.println("crawling...");
-
-            for (int i = 0; i < leftDivsElements.size(); i++) { //left or right divs are equal element count
-
-                Key key;
-                if (leftIsAnswerConfident >= 5) {
-                    //if left is answer
-                    key = new Key(rightDivsText.get(i), leftDivsText.get(i));
-                } else {
-                    //if right is answer
-                    key = new Key(leftDivsText.get(i), rightDivsText.get(i));
-                }
-
-                keys.add(key);
-                System.out.println(key);
-            }
-        }catch(ArrayIndexOutOfBoundsException e){
-            System.err.println("array of innerHTML is out of bounds,... please check left right box selectors again");
+                
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage() + " retry....");
+            driver.navigate().refresh();
+            return crawlingKeys(++triedTime);
         }
 
         //note: longer text is Question always!

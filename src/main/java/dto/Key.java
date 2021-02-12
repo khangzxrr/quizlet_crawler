@@ -5,6 +5,8 @@
  */
 package dto;
 
+import util.ConstantUtil;
+
 /**
  *
  * @author skyho
@@ -14,6 +16,20 @@ public class Key {
     String question;
     String answer;
 
+    //auto split and sort constructor
+    public Key(String rawStr){
+        String[] data = rawStr.split(ConstantUtil.SPLIT_BOX);
+        
+        if (data[0].length() > data[1].length()){
+            question = data[0];
+            answer = data[1];
+        }else{
+            question = data[1];
+            answer = data[0];
+        }
+        
+    }
+    
     public Key(String question, String answer) {
         this.question = question;
         this.answer = answer;
